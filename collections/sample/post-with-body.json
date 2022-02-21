@@ -1,0 +1,9 @@
+{
+    "method": "POST",
+    "url": "{{ env.url }}/post",
+    "body":
+    {
+        "foo": "bar",
+        "ab": 10
+    }
+}

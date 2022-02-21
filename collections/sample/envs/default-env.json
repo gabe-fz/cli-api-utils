@@ -1,0 +1,7 @@
+{
+    "env":
+    {
+        "host" : "httpbin",
+        "url": "https://{{ env.host }}.org"
+    }
+}
