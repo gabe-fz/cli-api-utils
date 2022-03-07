@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "nunjucks": "^3.2.3",
+    "yargs": "^17.3.1"
+  }
+}

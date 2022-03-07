@@ -3,12 +3,13 @@
 const nunjucks = require('nunjucks');
 
 
-export const HOME = __dirname.split("/").slice(0, -1).join("/");
-export const GENERATED_DIR = `${HOME}/src/generated`;
-export const CURRENT_ENV_FILE = `${GENERATED_DIR}/current-envs.json`;
-export const COLLECTIONS_DIR = `${HOME}/collections`;
+export const ROOT = __dirname.split("/").slice(0, -1).join("/");
+export const OUTPUT_DIR = `${ROOT}/output`;
+export const CURRENT_ENV_FILE = `${OUTPUT_DIR}/current-envs.json`;
+export const COLLECTIONS_DIR = `${ROOT}/collections`;
+export const ENV_MASTER_FILE = 'env-master.json';
 
-nunjucks.configure(HOME);
+nunjucks.configure(ROOT);
 
 // templating
 

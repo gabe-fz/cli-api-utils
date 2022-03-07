@@ -34,4 +34,4 @@ console.log(response.ok);
 console.log(response.status);
 console.log(response.statusText);
 console.log(response.headers.raw());
-console.log(data)
+console.log(JSON.stringify(data, null, 2));
