@@ -1,75 +1,92 @@
 #!/usr/bin/env zx
 
 import {
-    ROOT, COLLECTIONS_DIR, OUTPUT_DIR, recursiveResolveTemplating, readFileToString, readFileToObj,
-    writeObjToFile
+    ROOT, ENVS_DIR, ENV_MASTER_FILE, OUTPUT_DIR, ACTIVE_ENV_FILE, recursiveResolveTemplating, readFileToString, readFileToObj,
+    writeObjToFile, groupBy
 } from './modules/common.mjs';
-import { getCollectionsAndEnvs, getCollectionsAndEnvIds } from './modules/args-collector.mjs';
 
 $.verbose = false;
 
 // arguments
 const args = require('yargs/yargs')(process.argv.slice(3))
-    .option('collection', {
-        alias: 'c',
-        demandOption: true,
-        description: 'Collection of requests',
-        type: 'string'
-    })
     .option('environment', {
         alias: 'e',
-        demandOption: true,
-        description: 'Environment your requests should point to',
+        demandOption: false,
+        description: 'Environment to set',
         type: 'string'
     })
     .option('task', {
         alias: 't',
         description: 'Which task to perform',
-        default: 'set-env',
+        default: 'list-all',
         type: 'string',
-        choices: ['set-env']
+        choices: ['list', 'get', 'set', 'refresh']
     })
     .help()
     .alias('help', 'h').argv;
-
-const collection = args.c;
-const environmentId = args.e;
+let environmentId = args.e;
 const task = args.t;
-console.log(chalk.cyan(`collection: ${collection} | environment: ${environmentId} | task : ${task}`));
+console.log(chalk.magenta(`input: `)+chalk.cyan(`environment: ${environmentId} | task : ${task}`));
 
-await setEnv();
+switch (task) {
+    case 'list':
+        await listEnvs();
+        break;
+    case 'get':
+        console.log((await getActiveEnv()).active);
+        break;
+    case 'set':
+        await setEnv();
+        break;
+    case 'refresh':
+        await refreshActiveEnv();
+        break;
+}
+
+async function listEnvs() {
+    console.log(getAllEnvIds(await getAllEnvMetaDataById()));
+}
+
+async function getActiveEnv() {
+    return await readFileToObj(ACTIVE_ENV_FILE, {});
+}
+
+async function getAllEnvMetaDataById() {
+    const envs = await readFileToObj(ENV_MASTER_FILE, {});
+    return groupBy(envs, x => x.id);
+}
+
+function getAllEnvIds(envMetaDataById) {
+    return Array.from(envMetaDataById.keys());
+}
 
 async function setEnv() {
 
-    const envDir = `${COLLECTIONS_DIR}/${collection}/envs`;
-    const renderedEnvDir = `${OUTPUT_DIR}/rendered-env/${collection}`;
+    const renderedEnvDir = `${OUTPUT_DIR}/rendered-env`;
     await $`mkdir -p ${renderedEnvDir}`;
 
-    const collectionsAndEnvs = await getCollectionsAndEnvs();
+    const allEnvMetaDataById = await getAllEnvMetaDataById();
 
     // validate input
-    const collectionsAndEnvIds = getCollectionsAndEnvIds(collectionsAndEnvs);
-    const invalidArgs = [];
-    if (!Object.keys(collectionsAndEnvIds).includes(collection))
-        invalidArgs.push(`collection: ${collection}`)
-    if (!collectionsAndEnvIds[collection] || !collectionsAndEnvIds[collection].includes(environmentId))
-        invalidArgs.push(`environment: ${environmentId}`)
-    if (invalidArgs.length > 0) {
-        console.log(chalk.red(`following input is not valid`));
-        console.log(invalidArgs);
+    const allEnvIds = getAllEnvIds(allEnvMetaDataById);
+    if (!environmentId) {
+        console.log(chalk.red(`must pass in an environment to set it`));
+        return;
+    }
+    if (!allEnvIds.includes(environmentId)) {
+        console.log(chalk.red(`passed in environment [${environmentId}] is not valid`));
         console.log(chalk.yellow(`please use below as reference for valid input`));
-        console.log(collectionsAndEnvIds);
+        console.log(allEnvIds);
         return;
     }
 
     // get environment and run script if there is one
 
-    console.log(collectionsAndEnvs);
-    const environment = collectionsAndEnvs[collection].get(environmentId);
-    const selectedEnvFilePath = `${envDir}/${environment.file}`;
+    const environment = allEnvMetaDataById.get(environmentId);
+    const selectedEnvFilePath = `${ENVS_DIR}/${environment.file}`;
 
     if (environment.script) {
-        const scriptFilePath = `${envDir}/${environment.script}`;
+        const scriptFilePath = `${ENVS_DIR}/${environment.script}`;
         const scriptCall = `${scriptFilePath} ${environment["script-input"].join(" ")} ${selectedEnvFilePath}`
         await $`${ROOT}/src/zx-call.sh ${scriptCall}`
     }
@@ -81,16 +98,24 @@ async function setEnv() {
     await writeObjToFile(generatedEnvFilePath, env);
 
     // write current env to disk
-    const CURRENT_ENV_FILE = `${OUTPUT_DIR}/current-envs.json`;
-    const currentEnv = await readFileToObj(CURRENT_ENV_FILE, {});
-    (currentEnv[collection] ??= {}).selectedEnv = environment.id;
-    currentEnv[collection].generatedEnvFilePath = generatedEnvFilePath;
-    await writeObjToFile(CURRENT_ENV_FILE, currentEnv);
+    const activeEnv = await getActiveEnv();
+    (activeEnv ??= {}).active = environment.id;
+    activeEnv.generatedEnvFilePath = generatedEnvFilePath;
+    await writeObjToFile(ACTIVE_ENV_FILE, activeEnv);
 
-    console.log(chalk.green(`selected collection: `)+chalk.yellow(collection));
-    console.log(chalk.green(`selected env: `)+chalk.yellow(environmentId));
-    console.log(chalk.green(`rendered file: `)+chalk.yellow(generatedEnvFilePath));
-
+    console.log(chalk.green(`active env: `)+chalk.yellow(environmentId));
+    console.log(chalk.green(`file rendered: `)+chalk.yellow(generatedEnvFilePath));
 
 }
 
+async function refreshActiveEnv() {
+    const activeEnvId = (await getActiveEnv()).active;
+
+    if (!activeEnvId) {
+        console.log(chalk.red(`there is no currently active environment to refresh\nuse 'set' instead`));
+        return;
+    }
+        
+    environmentId = activeEnvId;
+    await setEnv();
+}

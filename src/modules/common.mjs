@@ -2,12 +2,11 @@
 
 const nunjucks = require('nunjucks');
 
-
 export const ROOT = __dirname.split("/").slice(0, -1).join("/");
 export const OUTPUT_DIR = `${ROOT}/output`;
-export const CURRENT_ENV_FILE = `${OUTPUT_DIR}/current-envs.json`;
-export const COLLECTIONS_DIR = `${ROOT}/collections`;
-export const ENV_MASTER_FILE = 'env-master.json';
+export const ACTIVE_ENV_FILE = `${OUTPUT_DIR}/active-env.json`;
+export const ENVS_DIR = `${ROOT}/envs`;
+export const ENV_MASTER_FILE = `${ENVS_DIR}/env-master.json`;
 
 nunjucks.configure(ROOT);
 
@@ -63,3 +62,7 @@ export function groupBy(list, keyGetter) {
     });
     return map;
 }
+
+export function union(a, b) {
+    return { ...a, ...b };
+  }
