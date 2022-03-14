@@ -1,7 +1,7 @@
 #!/usr/bin/env zx
 
 import {
-    ROOT, ENVS_DIR, ENV_MASTER_FILE, OUTPUT_DIR, ACTIVE_ENV_FILE, recursiveResolveTemplating, readFileToString, readFileToObj,
+    ROOT, ENVS_DIR, ENV_MASTER_FILE, OUTPUT_DIR, ACTIVE_ENV_FILE, getActiveEnvMetaData, recursiveResolveTemplating, readFileToString, readFileToObj,
     writeObjToFile, groupBy
 } from './modules/common.mjs';
 
@@ -18,7 +18,7 @@ const args = require('yargs/yargs')(process.argv.slice(3))
     .option('task', {
         alias: 't',
         description: 'Which task to perform',
-        default: 'list-all',
+        default: 'list',
         type: 'string',
         choices: ['list', 'get', 'set', 'refresh']
     })
@@ -33,7 +33,7 @@ switch (task) {
         await listEnvs();
         break;
     case 'get':
-        console.log((await getActiveEnv()).active);
+        console.log((await getActiveEnvMetaData()).active);
         break;
     case 'set':
         await setEnv();
@@ -45,10 +45,6 @@ switch (task) {
 
 async function listEnvs() {
     console.log(getAllEnvIds(await getAllEnvMetaDataById()));
-}
-
-async function getActiveEnv() {
-    return await readFileToObj(ACTIVE_ENV_FILE, {});
 }
 
 async function getAllEnvMetaDataById() {
@@ -92,13 +88,12 @@ async function setEnv() {
     }
 
     // write environment contents to disk
-
     const env = JSON.parse(recursiveResolveTemplating(await readFileToString(selectedEnvFilePath, "")));
     const generatedEnvFilePath = `${renderedEnvDir}/${environmentId}.json`;
     await writeObjToFile(generatedEnvFilePath, env);
 
-    // write current env to disk
-    const activeEnv = await getActiveEnv();
+    // write active env to disk
+    const activeEnv = await getActiveEnvMetaData();
     (activeEnv ??= {}).active = environment.id;
     activeEnv.generatedEnvFilePath = generatedEnvFilePath;
     await writeObjToFile(ACTIVE_ENV_FILE, activeEnv);
@@ -109,7 +104,7 @@ async function setEnv() {
 }
 
 async function refreshActiveEnv() {
-    const activeEnvId = (await getActiveEnv()).active;
+    const activeEnvId = (await getActiveEnvMetaData()).active;
 
     if (!activeEnvId) {
         console.log(chalk.red(`there is no currently active environment to refresh\nuse 'set' instead`));

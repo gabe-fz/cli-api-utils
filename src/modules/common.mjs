@@ -7,8 +7,14 @@ export const OUTPUT_DIR = `${ROOT}/output`;
 export const ACTIVE_ENV_FILE = `${OUTPUT_DIR}/active-env.json`;
 export const ENVS_DIR = `${ROOT}/envs`;
 export const ENV_MASTER_FILE = `${ENVS_DIR}/env-master.json`;
+export const HISTORY_DIR = `${OUTPUT_DIR}/history`
 
 nunjucks.configure(ROOT);
+
+// functional
+export async function getActiveEnvMetaData() {
+    return await readFileToObj(ACTIVE_ENV_FILE, {});
+}
 
 // templating
 
