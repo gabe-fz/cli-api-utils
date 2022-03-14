@@ -1,7 +1,6 @@
 #!/usr/bin/env zx
 import {
-    HISTORY_DIR , getActiveEnvMetaData, renderTemplate, recursiveResolveTemplating,
-    readFileToString, readFileToObj, writeObjToFile, groupBy
+    HISTORY_DIR , getActiveEnvMetaData, renderTemplate, readFileToObj, writeObjToFile
 } from './modules/common.mjs';
 const path = require("path");
 
@@ -24,7 +23,7 @@ const args = require('yargs/yargs')(process.argv.slice(3))
     })
     .help()
     .alias('help', 'h').argv;
-let requestFile = args.r;
+let requestFile = `${process.env.PWD}/${args.r}`;
 const task = args.t;
 // console.log(chalk.magenta(`input: `)+chalk.cyan(`requestFile: ${requestFile} | task : ${task}`));
 
@@ -44,7 +43,7 @@ async function runRequest() {
     }
 
     // read & render request using environment
-    const requestFileObj = renderTemplate(requestFile, env);
+    const requestFileObj = await renderTemplate(requestFile, env);
     if (requestFileObj.body)
         requestFileObj.body = JSON.stringify(requestFileObj.body);
 

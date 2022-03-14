@@ -9,7 +9,7 @@ export const ENVS_DIR = `${ROOT}/envs`;
 export const ENV_MASTER_FILE = `${ENVS_DIR}/env-master.json`;
 export const HISTORY_DIR = `${OUTPUT_DIR}/history`
 
-nunjucks.configure(ROOT);
+// nunjucks.configure(ROOT);
 
 // functional
 export async function getActiveEnvMetaData() {
@@ -18,8 +18,9 @@ export async function getActiveEnvMetaData() {
 
 // templating
 
-export function renderTemplate(filePath, contextObj) {
-    return JSON.parse(nunjucks.render(filePath, contextObj));
+export async function renderTemplate(filePath, contextObj) {
+    const fileString = await readFileToString(filePath, "{}");
+    return JSON.parse(nunjucks.renderString(fileString, contextObj));
 }
 
 // nunchuk wrapper that allows to use the template itself as context
