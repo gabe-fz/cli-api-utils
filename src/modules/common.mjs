@@ -3,15 +3,26 @@
 const nunjucks = require('nunjucks');
 
 export const ROOT = __dirname.split("/").slice(0, -1).join("/");
-export const OUTPUT_DIR = `${ROOT}/output`;
+export const OUTPUT_DIR_NAME = `output`;
+export const OUTPUT_DIR = `${ROOT}/${OUTPUT_DIR_NAME}`;
 export const ACTIVE_ENV_FILE = `${OUTPUT_DIR}/active-env.json`;
-export const ENVS_DIR = `${ROOT}/envs`;
-export const ENV_MASTER_FILE = `${ENVS_DIR}/env-master.json`;
 export const HISTORY_DIR = `${OUTPUT_DIR}/history`
 
-// nunjucks.configure(ROOT);
-
 // functional
+
+export async function getEnvsDir() {
+    const config = await getConfig();
+    console.log(config);
+    if (path.isAbsolute(config.envsDir))
+        return path.resolve(config.envsDir);
+    else
+        return `${ROOT}/${config.envsDir}`
+}
+
+export async function getConfig() {
+    return readFileToObj(`${ROOT}/config.json`, {});
+}
+
 export async function getActiveEnvMetaData() {
     return await readFileToObj(ACTIVE_ENV_FILE, {});
 }

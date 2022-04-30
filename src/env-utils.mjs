@@ -1,7 +1,7 @@
 #!/usr/bin/env zx
 
 import {
-    ROOT, ENVS_DIR, ENV_MASTER_FILE, OUTPUT_DIR, ACTIVE_ENV_FILE, getActiveEnvMetaData, recursiveResolveTemplating, readFileToString, readFileToObj,
+    getEnvsDir, ROOT, OUTPUT_DIR, ACTIVE_ENV_FILE, getActiveEnvMetaData, recursiveResolveTemplating, readFileToString, readFileToObj,
     writeObjToFile, groupBy
 } from './modules/common.mjs';
 
@@ -27,6 +27,9 @@ const args = require('yargs/yargs')(process.argv.slice(3))
 let environmentId = args.e;
 const task = args.t;
 console.log(chalk.magenta(`input: `)+chalk.cyan(`environment: ${environmentId} | task : ${task}`));
+
+export const ENVS_DIR = await getEnvsDir();
+export const ENV_MASTER_FILE = `${ENVS_DIR}/env-master.json`;
 
 switch (task) {
     case 'list':

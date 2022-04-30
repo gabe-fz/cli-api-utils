@@ -1,6 +1,6 @@
 #!/usr/bin/env zx
 import {
-    HISTORY_DIR, getActiveEnvMetaData, renderTemplate, readFileToObj, writeObjToFile, groupBy, union
+    OUTPUT_DIR_NAME, readFileToObj, writeObjToFile, groupBy, union
 } from '../modules/common.mjs';
 
 $.verbose = false;
@@ -15,7 +15,8 @@ const args = require('yargs/yargs')(process.argv.slice(3))
     })
     .help()
     .alias('help', 'h').argv;
-let sourceFile = `${process.env.PWD}/${args.s}`;
+let sourceFile = path.resolve(args.s);
+const INSOMNIA_OUTPUT_DIR = `${__dirname.split("/").slice(0, -2).join("/")}/${OUTPUT_DIR_NAME}/insomnia`
 console.log(chalk.magenta(`input: `) + chalk.cyan(`sourceFile: ${sourceFile}`));
 
 await runConversion();
@@ -30,10 +31,10 @@ async function runConversion() {
     const folderNames = requestGroups
         .map(requestGroup => requestGroupToFolderName(requestGroup, requestGroupsById));
     const foldersById = groupBy(folderNames, folder => folder.id);
-    const requests = resources.filter(isRequest).slice(0, 10);
+    const requests = resources.filter(isRequest);
     const convertedRequests = requests.map(request => convertRequest(request, foldersById));
-    console.log(convertedRequests);
-
+    const result = await Promise.all(convertedRequests.map(writeConvertedRequest));
+    console.log(result);
 }
 
 function requestGroupToFolderName(requestGroup, requestGroupsById) {
@@ -57,11 +58,9 @@ function isRequest(resource) {
 
 function convertRequest(request, foldersById) {
 
-    // if (request.body && !request.body.mimeType)
-    //     console.log(request);
-
     const folderName = foldersById.get(request.parentId).name;
-    const fileName = `${folderName}/${request.name}.json`
+    const requestName = request.name.replaceAll("/", "-").replaceAll(">>", "-");
+    const fileName = `${folderName}/${requestName}.json`
     const url = request.url.replace(/\s+/g, '');
     const headers = request.headers && request.headers.length != 0 ?
         request.headers
@@ -100,4 +99,12 @@ function convertHeader(insomniaHeader) {
     return {
         [insomniaHeader.name]: insomniaHeader.value
     };
+}
+
+async function writeConvertedRequest(request) {
+    const filePath = `${INSOMNIA_OUTPUT_DIR}/${request.fileName}`
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    delete request.fileName;
+    await writeObjToFile(filePath, request);
+    return filePath;
 }
